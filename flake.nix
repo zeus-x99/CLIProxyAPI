@@ -40,8 +40,16 @@
         else
           null;
 
+      versionFile =
+        if builtins.pathExists ./VERSION then
+          lib.removePrefix "v" (lib.removeSuffix "\n" (lib.removeSuffix "\r" (builtins.readFile ./VERSION)))
+        else
+          "";
+
       version =
-        if tagRef != "" then
+        if versionFile != "" then
+          versionFile
+        else if tagRef != "" then
           lib.removePrefix "v" tagRef
         else if shortRevision != null then
           "unstable-${shortRevision}"

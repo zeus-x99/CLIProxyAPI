@@ -42,6 +42,9 @@ jobs:
 
           current_tag="$(git tag --merged origin/main --sort=-v:refname | grep '^v' | head -n1 || true)"
           upstream_tag="$(git tag --merged upstream/main --sort=-v:refname | grep '^v' | head -n1 || true)"
+          if [ -z "$current_tag" ] && [ -f VERSION ]; then
+            current_tag="$(tr -d '\r\n' < VERSION)"
+          fi
           current_short="$(git rev-parse --short origin/main)"
           upstream_short="$(git rev-parse --short upstream/main)"
 
@@ -51,16 +54,27 @@ jobs:
             title="chore(upstream): ${current_short} -> ${upstream_short}"
           fi
 
-          echo "has_updates=true" >> "$GITHUB_OUTPUT"
-          echo "branch=sync-upstream/main" >> "$GITHUB_OUTPUT"
-          echo "title=${title}" >> "$GITHUB_OUTPUT"
-          echo "upstream_short=${upstream_short}" >> "$GITHUB_OUTPUT"
+          {
+            echo "has_updates=true"
+            echo "branch=sync-upstream/main"
+            echo "title=${title}"
+            echo "upstream_short=${upstream_short}"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Merge upstream into sync branch
         if: steps.detect.outputs.has_updates == 'true'
         run: |
           git checkout -B "${{ steps.detect.outputs.branch }}" origin/main
           git merge --no-edit upstream/main
+
+          latest_tag="$(git tag --merged HEAD --sort=-v:refname | grep '^v' | head -n1 || true)"
+          if [ -n "$latest_tag" ]; then
+            printf '%s\n' "$latest_tag" > VERSION
+            git add VERSION
+            if ! git diff --cached --quiet; then
+              git commit --amend --no-edit
+            fi
+          fi
 
       - name: Push sync branch
         if: steps.detect.outputs.has_updates == 'true'
