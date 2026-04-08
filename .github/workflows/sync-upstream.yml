@@ -87,17 +87,20 @@ jobs:
         if: steps.detect.outputs.has_updates == 'true'
         id: pr
         run: |
-          pr_number="$(gh pr list --head "${{ steps.detect.outputs.branch }}" --base main --json number --jq '.[0].number')"
+          head_ref="${GITHUB_REPOSITORY_OWNER}:${{ steps.detect.outputs.branch }}"
+          pr_number="$(gh pr list --repo "${GITHUB_REPOSITORY}" --head "${head_ref}" --base main --json number --jq '.[0].number')"
 
           if [ -z "$pr_number" ]; then
             pr_url="$(gh pr create \
+              --repo "${GITHUB_REPOSITORY}" \
               --base main \
-              --head "${{ steps.detect.outputs.branch }}" \
+              --head "${head_ref}" \
               --title "${{ steps.detect.outputs.title }}" \
               --body "Automated upstream sync from router-for-me/CLIProxyAPI.")"
             pr_number="${pr_url##*/}"
           else
             gh pr edit "$pr_number" \
+              --repo "${GITHUB_REPOSITORY}" \
               --title "${{ steps.detect.outputs.title }}" \
               --body "Automated upstream sync from router-for-me/CLIProxyAPI."
           fi
@@ -109,6 +112,7 @@ jobs:
         continue-on-error: true
         run: |
           gh pr merge "${{ steps.pr.outputs.number }}" \
+            --repo "${GITHUB_REPOSITORY}" \
             --squash \
             --auto \
             --delete-branch \
