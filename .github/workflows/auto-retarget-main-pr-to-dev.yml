@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   retarget:
-    if: github.actor != 'github-actions[bot]'
+    if: github.actor != 'github-actions[bot]' && !startsWith(github.event.pull_request.head.ref, 'sync-upstream/')
     runs-on: ubuntu-latest
     steps:
       - name: Retarget PR base to dev
@@ -39,6 +39,20 @@ jobs:
             if (headRef === desiredBase) {
               core.info(`PR #${prNumber} is ${desiredBase} -> main; skipping retarget.`);
               return;
+            }
+
+            try {
+              await github.rest.repos.getBranch({
+                owner,
+                repo,
+                branch: desiredBase,
+              });
+            } catch (error) {
+              if (error.status === 404) {
+                core.info(`Branch ${desiredBase} does not exist; skipping retarget.`);
+                return;
+              }
+              throw error;
             }
 
             core.info(`Retargeting PR #${prNumber} base from ${baseRef} to ${desiredBase}.`);
