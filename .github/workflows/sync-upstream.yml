@@ -94,6 +94,14 @@ jobs:
 
           git restore --source=origin/main --staged --worktree -- "${keep_ours_paths[@]}"
 
+          unresolved_same_content="$(git diff --name-only --diff-filter=U || true)"
+          for path in ${unresolved_same_content}; do
+            if git diff --quiet HEAD upstream/main -- "${path}"; then
+              git checkout --ours -- "${path}"
+              git add "${path}"
+            fi
+          done
+
           remaining_unresolved="$(git diff --name-only --diff-filter=U || true)"
           if [ -n "${remaining_unresolved}" ]; then
             printf 'Unresolved merge conflicts remain:\n%s\n' "${remaining_unresolved}" >&2
