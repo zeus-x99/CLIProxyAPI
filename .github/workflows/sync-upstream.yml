@@ -67,7 +67,31 @@ jobs:
         if: steps.detect.outputs.has_updates == 'true'
         run: |
           git checkout -B "${{ steps.detect.outputs.branch }}" origin/main
-          git merge --no-edit upstream/main
+          if ! git merge --no-edit upstream/main; then
+            keep_ours_files=(
+              AGENTS.md
+              .github/workflows/agents-md-guard.yml
+              .github/workflows/auto-retarget-main-pr-to-dev.yml
+              .github/workflows/pr-path-guard.yml
+            )
+
+            unresolved="$(git diff --name-only --diff-filter=U || true)"
+
+            for path in "${keep_ours_files[@]}"; do
+              if printf '%s\n' "${unresolved}" | grep -Fxq "${path}"; then
+                git checkout --ours -- "${path}"
+                git add "${path}"
+              fi
+            done
+
+            remaining_unresolved="$(git diff --name-only --diff-filter=U || true)"
+            if [ -n "${remaining_unresolved}" ]; then
+              printf 'Unresolved merge conflicts remain:\n%s\n' "${remaining_unresolved}" >&2
+              exit 1
+            fi
+
+            git commit --no-edit
+          fi
 
           latest_tag="$(git tag --merged HEAD --sort=-v:refname | grep '^v' | head -n1 || true)"
           if [ -n "$latest_tag" ]; then
