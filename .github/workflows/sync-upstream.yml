@@ -87,7 +87,7 @@ jobs:
 
           git checkout -B "${{ steps.detect.outputs.branch }}" origin/main
           merge_status=0
-          git merge --no-commit --no-ff upstream/main || merge_status=$?
+          git merge -X theirs --no-commit --no-ff upstream/main || merge_status=$?
           if [ "${merge_status}" -ne 0 ] && [ "${merge_status}" -ne 1 ]; then
             exit "${merge_status}"
           fi
