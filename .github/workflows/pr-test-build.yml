@@ -8,6 +8,7 @@ permissions:
 
 jobs:
   build:
+    if: ${{ !startsWith(github.head_ref, 'sync-upstream/') }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
