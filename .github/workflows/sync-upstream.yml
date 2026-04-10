@@ -74,19 +74,17 @@ jobs:
       - name: Merge upstream into sync branch
         if: steps.detect.outputs.has_updates == 'true'
         run: |
-          keep_ours_paths=(
-            AGENTS.md
-            VERSION
-            flake.nix
-            flake.lock
-            module.nix
-            package.nix
-            examples/flake.nix
-            .github/workflows
-          )
-
-          git checkout -B "${{ steps.detect.outputs.branch }}" upstream/main
-          git restore --source=origin/main --staged --worktree -- "${keep_ours_paths[@]}"
+          git checkout -B "${{ steps.detect.outputs.branch }}" origin/main
+          git restore --source=upstream/main --staged --worktree -- \
+            . \
+            ':(exclude)AGENTS.md' \
+            ':(exclude)VERSION' \
+            ':(exclude)flake.nix' \
+            ':(exclude)flake.lock' \
+            ':(exclude)module.nix' \
+            ':(exclude)package.nix' \
+            ':(exclude)examples/flake.nix' \
+            ':(exclude).github/workflows/**'
 
           if ! git diff --cached --quiet || ! git diff --quiet; then
             git commit -m "${{ steps.detect.outputs.title }}"
