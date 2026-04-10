@@ -1,0 +1,61 @@
+name: publish-tag
+
+on:
+  workflow_run:
+    workflows:
+      - nix
+    types:
+      - completed
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.CLIPROXYAPI_ACTIONS_PAT || github.token }}
+      TARGET_SHA: ${{ github.event.workflow_run.head_sha }}
+    steps:
+      - name: Checkout tested commit
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.workflow_run.head_sha }}
+          token: ${{ secrets.CLIPROXYAPI_ACTIONS_PAT || github.token }}
+          persist-credentials: true
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Create release tag
+        run: |
+          set -euo pipefail
+
+          version="$(tr -d '\r\n' < VERSION)"
+          if [[ -z "${version}" ]]; then
+            echo "VERSION is empty" >&2
+            exit 1
+          fi
+
+          git fetch origin --tags
+
+          if git rev-parse -q --verify "refs/tags/${version}^{commit}" >/dev/null; then
+            existing_commit="$(git rev-parse "refs/tags/${version}^{commit}")"
+            if [[ "${existing_commit}" == "${TARGET_SHA}" ]]; then
+              echo "Tag ${version} already points to ${TARGET_SHA}; nothing to do."
+              exit 0
+            fi
+
+            echo "Tag ${version} already exists at ${existing_commit}, expected ${TARGET_SHA}." >&2
+            exit 1
+          fi
+
+          git tag -a "${version}" "${TARGET_SHA}" -m "Release ${version}"
+          git push origin "refs/tags/${version}"
