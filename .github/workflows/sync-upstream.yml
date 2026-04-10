@@ -90,7 +90,7 @@ jobs:
             git commit -m "${{ steps.detect.outputs.title }}"
           fi
 
-          latest_tag="$(git tag --merged HEAD --sort=-v:refname | grep '^v' | head -n1 || true)"
+          latest_tag="$(git tag --merged upstream/main --sort=-v:refname | grep '^v' | head -n1 || true)"
           if [ -n "$latest_tag" ]; then
             printf '%s\n' "$latest_tag" > VERSION
             git add VERSION
