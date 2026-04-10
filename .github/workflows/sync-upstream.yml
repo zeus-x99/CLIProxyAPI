@@ -31,11 +31,26 @@ jobs:
         run: |
           git remote add upstream https://github.com/router-for-me/CLIProxyAPI.git 2>/dev/null || true
           git fetch origin main
-          git fetch upstream main --tags
+          git fetch --no-tags upstream main
 
       - name: Detect upstream updates
         id: detect
         run: |
+          current_tag=""
+          if [ -f VERSION ]; then
+            current_tag="$(tr -d '\r\n' < VERSION)"
+          fi
+          if [ -z "$current_tag" ]; then
+            current_tag="$(git tag --merged origin/main --sort=-v:refname | grep '^v' | head -n1 || true)"
+          fi
+
+          upstream_tag="$(
+            git ls-remote --tags --refs upstream 'v*' \
+              | awk -F/ '{print $NF}' \
+              | sort -V \
+              | tail -n1
+          )"
+
           if git diff --quiet origin/main upstream/main -- \
             . \
             ':(exclude)AGENTS.md' \
@@ -45,16 +60,11 @@ jobs:
             ':(exclude)module.nix' \
             ':(exclude)package.nix' \
             ':(exclude)examples/flake.nix' \
-            ':(exclude).github/workflows/**'; then
+            ':(exclude).github/workflows/**' && [ "${current_tag}" = "${upstream_tag}" ]; then
             echo "has_updates=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          current_tag="$(git tag --merged origin/main --sort=-v:refname | grep '^v' | head -n1 || true)"
-          upstream_tag="$(git tag --merged upstream/main --sort=-v:refname | grep '^v' | head -n1 || true)"
-          if [ -z "$current_tag" ] && [ -f VERSION ]; then
-            current_tag="$(tr -d '\r\n' < VERSION)"
-          fi
           current_short="$(git rev-parse --short origin/main)"
           upstream_short="$(git rev-parse --short upstream/main)"
 
@@ -69,6 +79,7 @@ jobs:
             echo "branch=sync-upstream/main"
             echo "title=${title}"
             echo "upstream_short=${upstream_short}"
+            echo "upstream_tag=${upstream_tag}"
           } >> "$GITHUB_OUTPUT"
 
       - name: Merge upstream into sync branch
@@ -90,12 +101,16 @@ jobs:
             git commit -m "${{ steps.detect.outputs.title }}"
           fi
 
-          latest_tag="$(git tag --merged upstream/main --sort=-v:refname | grep '^v' | head -n1 || true)"
+          latest_tag="${{ steps.detect.outputs.upstream_tag }}"
           if [ -n "$latest_tag" ]; then
             printf '%s\n' "$latest_tag" > VERSION
             git add VERSION
             if ! git diff --cached --quiet; then
-              git commit --amend --no-edit
+              if [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" ]; then
+                git commit -m "${{ steps.detect.outputs.title }}"
+              else
+                git commit --amend --no-edit
+              fi
             fi
           fi
 
