@@ -50,11 +50,10 @@ jobs:
             existing_commit="$(git rev-parse "refs/tags/${version}^{commit}")"
             if [[ "${existing_commit}" == "${TARGET_SHA}" ]]; then
               echo "Tag ${version} already points to ${TARGET_SHA}; nothing to do."
-              exit 0
+            else
+              echo "Tag ${version} already exists at ${existing_commit}; skipping re-tag for ${TARGET_SHA}."
             fi
-
-            echo "Tag ${version} already exists at ${existing_commit}, expected ${TARGET_SHA}." >&2
-            exit 1
+            exit 0
           fi
 
           git tag -a "${version}" "${TARGET_SHA}" -m "Release ${version}"
