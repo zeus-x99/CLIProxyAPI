@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Refresh models catalog
         run: |
           git fetch --depth 1 https://github.com/router-for-me/models.git main
@@ -28,9 +28,11 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Generate Build Metadata
         run: |
-          echo "VERSION=${GITHUB_REF_NAME}" >> $GITHUB_ENV
-          echo COMMIT=`git rev-parse --short HEAD` >> $GITHUB_ENV
-          echo BUILD_DATE=`date -u +%Y-%m-%dT%H:%M:%SZ` >> $GITHUB_ENV
+          {
+            echo "VERSION=${GITHUB_REF_NAME}"
+            echo "COMMIT=$(git rev-parse --short HEAD)"
+            echo "BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          } >> "$GITHUB_ENV"
       - name: Build and push (amd64)
         uses: docker/build-push-action@v6
         with:
@@ -49,7 +51,7 @@ jobs:
     runs-on: ubuntu-24.04-arm
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Refresh models catalog
         run: |
           git fetch --depth 1 https://github.com/router-for-me/models.git main
@@ -63,9 +65,11 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Generate Build Metadata
         run: |
-          echo "VERSION=${GITHUB_REF_NAME}" >> $GITHUB_ENV
-          echo COMMIT=`git rev-parse --short HEAD` >> $GITHUB_ENV
-          echo BUILD_DATE=`date -u +%Y-%m-%dT%H:%M:%SZ` >> $GITHUB_ENV
+          {
+            echo "VERSION=${GITHUB_REF_NAME}"
+            echo "COMMIT=$(git rev-parse --short HEAD)"
+            echo "BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          } >> "$GITHUB_ENV"
       - name: Build and push (arm64)
         uses: docker/build-push-action@v6
         with:
@@ -87,7 +91,7 @@ jobs:
       - docker_arm64
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Login to DockerHub
@@ -97,9 +101,11 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Generate Build Metadata
         run: |
-          echo "VERSION=${GITHUB_REF_NAME}" >> $GITHUB_ENV
-          echo COMMIT=`git rev-parse --short HEAD` >> $GITHUB_ENV
-          echo BUILD_DATE=`date -u +%Y-%m-%dT%H:%M:%SZ` >> $GITHUB_ENV
+          {
+            echo "VERSION=${GITHUB_REF_NAME}"
+            echo "COMMIT=$(git rev-parse --short HEAD)"
+            echo "BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          } >> "$GITHUB_ENV"
       - name: Create and push multi-arch manifests
         run: |
           docker buildx imagetools create \
